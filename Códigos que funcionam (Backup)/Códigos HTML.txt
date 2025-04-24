@@ -1,0 +1,194 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Rede Edu IA</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 16px; max-width: 400px; margin: auto; }
+    input, textarea, button { width: 100%; margin-top: 8px; padding: 8px; box-sizing: border-box; }
+    ul { list-style: none; padding: 0; max-height: 200px; overflow-y: auto; border: 1px solid #ddd; }
+    li { padding: 6px; cursor: pointer; }
+    li:hover { background: #f0f0f0; }
+    .row { display: flex; gap: 8px; }
+    .row button { flex: 1; }
+  </style>
+</head>
+<body>
+  <h1>Rede Edu IA</h1>
+  <p id="status" style="font-weight:bold; margin-top:8px;">Verificando conexão…</p>
+
+  <label>Prompt da IA:</label>
+  <textarea id="prompt" rows="3" placeholder="Digite o prompt..."></textarea>
+  <label>Nome do Agente:</label>
+  <input id="agentName" type="text" placeholder="Ex: Assistente Peppers"/>
+  <label>Delay de Resposta (ms):</label>
+  <input id="delay" type="number" placeholder="Ex: 1500 = 1,5 segundos" value="3000"/>
+  <button id="saveConfig">Salvar Configurações</button>
+
+  <hr/>
+
+  <label>Upload de Base de Conhecimento:</label>
+  <input type="file" id="kbFile" accept=".pdf,.txt,.json"/>
+  <button id="uploadKb">Enviar Base</button>
+  <p id="uploadStatus"></p>
+
+  <hr/>
+
+  <label>Pesquisar Lead:</label>
+  <input id="search" placeholder="Ex: Douglas ou 5599..."/>
+  <ul id="list"></ul>
+  <p>Chat ativo: <strong id="active">—</strong></p>
+
+  <div class="row">
+    <button id="pause">Pausar Bot</button>
+    <button id="resume">Retomar Bot</button>
+    <hr/>
+    <button id="toggleBot" style="background:#333;color:#fff;">Carregando status...</button>
+  
+  </div>
+
+  <script>
+    let chats = [], activeId = '';
+
+    // 1) Consulta e exibe status de conexão
+    async function checkStatus() {
+      try {
+        const res = await fetch('http://localhost:3000/status');
+        const { connected } = await res.json();
+        const statusEl = document.getElementById('status');
+        statusEl.textContent = connected
+          ? 'WhatsApp conectado ✅'
+          : 'Desconectado – escaneie o QR';
+        statusEl.style.color = connected ? 'green' : 'red';
+      } catch (e) {
+        const statusEl = document.getElementById('status');
+        statusEl.textContent = 'Erro ao verificar status';
+        statusEl.style.color = 'red';
+        console.error('checkStatus:', e);
+      }
+    }
+
+    // 2) Carrega e renderiza lista de chats
+    async function loadChats() {
+      try {
+        const res = await fetch('http://localhost:3000/chats');
+        chats = await res.json();
+        render(chats);
+      } catch (e) {
+        console.error('loadChats:', e);
+      }
+    }
+    function render(list) {
+      const ul = document.getElementById('list');
+      ul.innerHTML = '';
+      list.forEach(c => {
+        const li = document.createElement('li');
+        li.textContent = `${c.name} (${c.id.replace('@c.us','')})`;
+        li.onclick = () => {
+          activeId = c.id;
+          document.getElementById('active').textContent = c.name;
+        };
+        ul.appendChild(li);
+      });
+    }
+
+    // 3) Filter ao digitar
+    document.getElementById('search').addEventListener('input', e => {
+      const term = e.target.value.toLowerCase();
+      render(chats.filter(c =>
+        c.name.toLowerCase().includes(term) ||
+        c.id.includes(term)
+      ));
+    });
+
+    // 4) Upload de arquivo
+    document.getElementById('uploadKb').onclick = async () => {
+      const fileInput = document.getElementById('kbFile');
+      if (!fileInput.files.length) return alert('Selecione um arquivo.');
+      const form = new FormData();
+      form.append('knowledge', fileInput.files[0]);
+      try {
+        const res = await fetch('http://localhost:5000/upload', {
+          method: 'POST',
+          body: form
+        });
+        document.getElementById('uploadStatus').textContent =
+          res.ok ? 'Upload bem‑sucedido!' : 'Falha no upload.';
+      } catch (e) {
+        console.error('uploadKb:', e);
+        alert('Erro ao enviar base.');
+      }
+    };
+
+    // 5) Pausar / Retomar Bot
+    document.getElementById('pause').onclick = async () => {
+      if (!activeId) return alert('Selecione um lead antes');
+      await fetch('http://localhost:3000/pause', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ chatId: activeId })
+      });
+      alert('Bot pausado para ' + activeId.replace('@c.us',''));
+    };
+    document.getElementById('resume').onclick = async () => {
+      if (!activeId) return alert('Selecione um lead antes');
+      await fetch('http://localhost:3000/resume', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ chatId: activeId })
+      });
+      alert('Bot retomado para ' + activeId.replace('@c.us',''));
+    };
+
+    // 6) Salvar configuração
+    document.getElementById('saveConfig').onclick = async () => {
+      const prompt    = document.getElementById('prompt').value;
+      const agentName = document.getElementById('agentName').value;
+      const delay     = parseInt(document.getElementById('delay').value, 10) || 0;
+      await fetch('http://localhost:3000/config', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ prompt, agentName, delay })
+      });
+      alert('Configurações salvas!');
+    };
+
+    // Busca e exibe estado global do bot
+    async function checkEnabled() {
+      try {
+        const res = await fetch('http://localhost:3000/enabled');
+        const { enabled } = await res.json();
+        const btn = document.getElementById('toggleBot');
+        if (enabled) {
+          btn.textContent = 'Desligar Bot 🚫';
+          btn.style.background = '#c00';
+        } else {
+          btn.textContent = 'Ligar Bot ✅';
+          btn.style.background = '#0a0';
+        }
+        return enabled;
+      } catch (e) {
+        console.error('checkEnabled:', e);
+      }
+    }
+
+    // Ao clicar, alterna entre /enable e /disable
+    document.getElementById('toggleBot').onclick = async () => {
+      const currently = await checkEnabled();
+      const url = currently ? '/disable' : '/enable';
+      await fetch('http://localhost:3000' + url, { method: 'POST' });
+      await checkEnabled();
+    };
+
+    // 7) Inicialização após DOM carregar
+    document.addEventListener('DOMContentLoaded', () => {
+      checkStatus();
+      setInterval(checkStatus, 5000);
+
+      checkEnabled();          // ← chama ao carregar
+      loadChats();
+    });
+
+  </script>
+</body>
+</html>

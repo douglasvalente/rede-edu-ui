@@ -1,0 +1,211 @@
+// File: server.js
+const { Client, LocalAuth } = require('whatsapp-web.js');
+const express               = require('express');
+const cors                  = require('cors');
+const qrcode                = require('qrcode-terminal');
+const axios                 = require('axios');
+const fs                    = require('fs-extra');
+const path                  = require('path');
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+// --- Configuração de prompt + agentName em memória ---
+let currentPrompt = null;
+let currentAgent  = null;
+let currentDelay  = 0;
+let pausedChats   = new Set();
+let isReady       = false;
+let botEnabled    = true; // controla se o bot inteiro está ativo
+
+// Caminho para salvar config em disco
+const CONFIG_PATH = path.join(__dirname, 'config.json');
+
+// ── Endpoints de controle global do bot ──────────────────
+// Retorna estado global do bot
+app.get('/enabled', (req, res) => {
+  res.json({ enabled: botEnabled });
+});
+// Liga o bot globalmente
+app.post('/enable', (req, res) => {
+  botEnabled = true;
+  console.log('🔛 Bot global ativado');
+  res.json({ enabled: botEnabled });
+});
+// Desliga o bot globalmente
+app.post('/disable', (req, res) => {
+  botEnabled = false;
+  console.log('⏸️ Bot global desativado');
+  res.json({ enabled: botEnabled });
+});
+
+// Inicializa cliente WhatsApp
+const client = new Client({ authStrategy: new LocalAuth() });
+
+// ── Eventos do WhatsApp Web.js ─────────────────────────
+// QR Code para autenticar
+client.on('qr', qr => {
+  console.log('📱 QR recebido, escaneie no WhatsApp Mobile:');
+  qrcode.generate(qr, { small: true });
+});
+
+// Cliente pronto
+client.on('ready', () => {
+  isReady = true;
+  console.log('✅ Cliente WhatsApp pronto!');
+
+  // Inicia o servidor HTTP somente após o client estar pronto
+  const PORT = 3000;
+  app.listen(PORT, () => {
+    console.log(`API Node ouvindo em http://localhost:${PORT}`);
+  });
+});
+
+// Inicia o client
+client.initialize();
+
+// Carrega configuração existente do disco
+(async () => {
+  try {
+    const cfg = await fs.readJson(CONFIG_PATH);
+    currentPrompt = cfg.prompt;
+    currentAgent  = cfg.agentName;
+    currentDelay  = cfg.delay;
+    console.log('🎛️ Config carregada do disco:', cfg);
+  } catch {
+    console.log('⚙️ Nenhuma config prévia encontrada.');
+  }
+})();
+
+// ── Manipulação de mensagens ────────────────────────────
+const chatHistory = new Map();
+
+client.on('message', async msg => {
+  const chatId = msg.from;
+
+  // Bot global desligado?
+  if (!botEnabled) return;
+
+  // Ignora grupos
+  if (msg.isGroupMsg || chatId.endsWith('@g.us')) return;
+
+  // Ignora chats pausados
+  if (pausedChats.has(chatId)) return;
+
+  // Histórico
+  let history = chatHistory.get(chatId) || [];
+  history.push({ role: 'user', content: msg.body });
+
+  try {
+    // Envia ao Flask
+    const payload = {
+      prompt:       currentPrompt,
+      agentName:    currentAgent,
+      message:      msg.body,
+      conversation: history
+    };
+    const resp   = await axios.post('http://127.0.0.1:5000/chat', payload);
+    const answer = resp.data.response;
+
+    // Limita histórico
+    const MAX_HISTORY = 20;
+    if (history.length > MAX_HISTORY * 2) {
+      history.splice(0, history.length - MAX_HISTORY * 2);
+    }
+    history.push({ role: 'assistant', content: answer });
+    chatHistory.set(chatId, history);
+
+    // Delay e typing
+    if (currentDelay > 0) {
+      await new Promise(r => setTimeout(r, currentDelay));
+    }
+    const chat = await msg.getChat();
+    await chat.sendStateTyping();
+    await chat.clearState();
+
+    // Responde
+    await client.sendMessage(chatId, answer);
+
+  } catch (err) {
+    console.error('Erro ao chamar Flask /chat:', err.message);
+    await client.sendMessage(chatId,
+      '❌ Desculpe, ocorreu um erro ao processar sua mensagem.'
+    );
+  }
+});
+
+// ── Endpoints HTTP ──────────────────────────────────────
+// Lista de chats
+app.get('/chats', async (req, res) => {
+  if (!isReady) {
+    return res
+      .status(503)
+      .json({ error: 'WhatsApp client ainda inicializando. Tente novamente em instantes.' });
+  }
+  try {
+    const chats = await client.getChats();
+    res.json(chats.map(c => ({
+      id:   c.id._serialized,
+      name: c.name || c.formattedTitle,
+    })));
+  } catch (e) {
+    console.error('Erro em getChats():', e);
+    res.status(500).json({ error: 'Falha ao recuperar lista de chats.' });
+  }
+});
+
+// Status de conexão
+app.get('/status', (req, res) => {
+  res.json({ connected: isReady });
+});
+
+// Retorna configuração atual
+app.get('/config', (req, res) => {
+  res.json({
+    prompt:    currentPrompt,
+    agentName: currentAgent,
+    delay:     currentDelay
+  });
+});
+
+// Atualiza prompt, agentName e delay
+app.post('/config', async (req, res) => {
+  const { prompt, agentName, delay } = req.body;
+  if (!prompt || !agentName) {
+    return res.status(400).json({ error: 'Prompt e Nome do Agente são obrigatórios.' });
+  }
+  currentPrompt = prompt;
+  currentAgent  = agentName;
+  currentDelay  = Number(delay) || 0;
+  console.log('➡️ Config atualizada:', { currentPrompt, currentAgent, currentDelay });
+
+  // Salva em disco
+  try {
+    await fs.writeJson(CONFIG_PATH, {
+      prompt:    currentPrompt,
+      agentName: currentAgent,
+      delay:     currentDelay
+    }, { spaces: 2 });
+    console.log('💾 Config salva em', CONFIG_PATH);
+  } catch (e) {
+    console.warn('⚠️ Falha ao salvar config:', e);
+  }
+
+  res.json({ status: 'ok' });
+});
+
+// Pause / Resume de chats
+app.post('/pause', (req, res) => {
+  const { chatId } = req.body;
+  pausedChats.add(chatId);
+  axios.post('http://127.0.0.1:5000/pause', { chatId }).catch(() => {});
+  res.json({ status: 'paused', chatId });
+});
+app.post('/resume', (req, res) => {
+  const { chatId } = req.body;
+  pausedChats.delete(chatId);
+  axios.post('http://127.0.0.1:5000/resume', { chatId }).catch(() => {});
+  res.json({ status: 'resumed', chatId });
+});

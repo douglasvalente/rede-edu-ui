@@ -1,0 +1,51 @@
+2025/04/23-21:20:42.799 23a4 Reusing MANIFEST C:\Users\dougl\Plataforma para conversar bot\rede-edu-ui\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2025/04/23-21:20:42.799 23a4 Recovering log #767
+2025/04/23-21:20:42.946 23a4 Reusing old log C:\Users\dougl\Plataforma para conversar bot\rede-edu-ui\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/000767.log 
+2025/04/23-21:20:48.017 3dd4 Level-0 table #785: started
+2025/04/23-21:20:48.055 3dd4 Level-0 table #785: 777398 bytes OK
+2025/04/23-21:20:48.057 3dd4 Delete type=0 #767
+2025/04/23-21:20:48.058 3dd4 Manual compaction at level-0 from '\x003\x00\x00\x00' @ 72057594037927935 : 1 .. '\x004\x00\x00\x00' @ 0 : 0; will stop at '\x003\x00\x00\x05' @ 2622978 : 1
+2025/04/23-21:20:48.059 3dd4 Compacting 1@0 + 0@1 files
+2025/04/23-21:20:48.103 3dd4 Generated table #786@0: 13140 keys, 304275 bytes
+2025/04/23-21:20:48.118 3dd4 Generated table #787@0: 84 keys, 1875 bytes
+2025/04/23-21:20:48.118 3dd4 Compacted 1@0 + 0@1 files => 306150 bytes
+2025/04/23-21:20:48.119 3dd4 compacted to: files[ 0 2 17 0 0 0 0 ]
+2025/04/23-21:20:48.119 3dd4 Delete type=2 #785
+2025/04/23-21:20:48.120 3dd4 Manual compaction at level-0 from '\x003\x00\x00\x05' @ 2622978 : 1 .. '\x004\x00\x00\x00' @ 0 : 0; will stop at (end)
+2025/04/23-21:20:51.361 3dd4 Compacting 1@1 + 10@2 files
+2025/04/23-21:20:51.555 3dd4 Generated table #788@1: 65356 keys, 2252727 bytes
+2025/04/23-21:20:51.674 3dd4 Generated table #789@1: 24946 keys, 2177228 bytes
+2025/04/23-21:20:51.722 3dd4 Generated table #790@1: 2617 keys, 2147464 bytes
+2025/04/23-21:20:51.768 3dd4 Generated table #791@1: 3031 keys, 2151308 bytes
+2025/04/23-21:20:51.891 3dd4 Generated table #792@1: 29616 keys, 2248429 bytes
+2025/04/23-21:20:52.000 3dd4 Generated table #793@1: 21916 keys, 2178459 bytes
+2025/04/23-21:20:52.066 3dd4 Generated table #794@1: 13674 keys, 2139364 bytes
+2025/04/23-21:20:52.300 3dd4 Generated table #795@1: 105713 keys, 2257257 bytes
+2025/04/23-21:20:52.516 3dd4 Generated table #796@1: 105575 keys, 2256686 bytes
+2025/04/23-21:20:52.691 3dd4 Generated table #797@1: 104721 keys, 2254378 bytes
+2025/04/23-21:20:52.702 3dd4 Generated table #798@1: 4317 keys, 86448 bytes
+2025/04/23-21:20:52.702 3dd4 Compacted 1@1 + 10@2 files => 22149748 bytes
+2025/04/23-21:20:52.703 3dd4 compacted to: files[ 0 1 18 0 0 0 0 ]
+2025/04/23-21:20:52.703 3dd4 Delete type=2 #771
+2025/04/23-21:20:52.703 3dd4 Delete type=2 #772
+2025/04/23-21:20:52.703 3dd4 Delete type=2 #773
+2025/04/23-21:20:52.703 3dd4 Delete type=2 #774
+2025/04/23-21:20:52.703 3dd4 Delete type=2 #775
+2025/04/23-21:20:52.704 3dd4 Delete type=2 #776
+2025/04/23-21:20:52.704 3dd4 Delete type=2 #777
+2025/04/23-21:20:52.704 3dd4 Delete type=2 #778
+2025/04/23-21:20:52.704 3dd4 Delete type=2 #779
+2025/04/23-21:20:52.704 3dd4 Delete type=2 #780
+2025/04/23-21:20:52.704 3dd4 Delete type=2 #786
+2025/04/23-21:21:51.577 23a4 Compacting 1@1 + 7@2 files
+2025/04/23-21:21:51.711 23a4 Generated table #799@1: 60103 keys, 1300612 bytes
+2025/04/23-21:21:51.711 23a4 Compacted 1@1 + 7@2 files => 1300612 bytes
+2025/04/23-21:21:51.712 23a4 compacted to: files[ 0 0 12 0 0 0 0 ]
+2025/04/23-21:21:51.712 23a4 Delete type=2 #701
+2025/04/23-21:21:51.712 23a4 Delete type=2 #717
+2025/04/23-21:21:51.712 23a4 Delete type=2 #733
+2025/04/23-21:21:51.712 23a4 Delete type=2 #749
+2025/04/23-21:21:51.712 23a4 Delete type=2 #765
+2025/04/23-21:21:51.712 23a4 Delete type=2 #781
+2025/04/23-21:21:51.712 23a4 Delete type=2 #782
+2025/04/23-21:21:51.712 23a4 Delete type=2 #787
